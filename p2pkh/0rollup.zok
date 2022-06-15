@@ -1,0 +1,81 @@
+from "./common" import u8_to_bools, u8_to_field
+from "./vm" import vm, emptyInitialStack, Context, MAX_STACK, MAX_OPS
+
+/*
+Sample argument for computing witness
+118 170 76 184 85 21 15 28 0 104 44 142 218 184 158 115 6 120 21 76 202 167 81 100 214 76 30 125 210 94 123 21 40 125 59 47 136 172 76 38 179 111 37 50 120 145 7 219 194 188 19 95 33 104 143 170 119 14 53 228 164 173 121 166 166 81 237 54 0 123 36 76 0 205 79 77 188 55 22 128 25 145 43 31 216 144 86 220 184 236 189 91 137 174 83 36 112 66 142 122 170 17 236 175 76 9 83 22 81 252 204 173 20 37 221 161 14 122 87 32 252 42 111 154 66 109 144 10 228 43 38 189 94 122 178 241 176 76 4 8 82 119 222 136 35 12 91 99 146 114 97 181 165 210 192 99 82 145 104 59 46 208 76 119 79 188 61 243 148 130 124 213 43 70 108 216 146 69 24 240 113 114 192 248 198 149 198 76 15 119 193 19 87 180 97 215 135 239 49 134 74 22 63 57 149 723058736 1843701591 1072936076 3036496655 3339662838 129684144 3842486204 1060083354 1719969981 2671094214 3733828187 23882685 1040072389 2495891126 1627391694 1372194221
+*/
+
+def main(private u8[38] lockScript, private u8[167] unlockScript, private u32[8] M0, private u32[8] M1) -> bool:
+    // The P2PKH tx in Bitcoin typically uses OP_HASH160 for public key hash,
+    // but the standard library didn't have the required hashing function of RIPEMD-160.
+    // Therefore, In this example, we use OP_HASH256 as the hashing function.
+    // Since this is a special purpose VM, the first sha256 will only work for the special
+    // data arrangement* as describe below: it reads first three stack items (without popping them)
+    // and takes 24, 24, 17 bytes of the item, respectively.
+
+    // lock script must be
+    // OP_DUP OP_HASH256 OP_PUSHDATA1 PKHash(16 bytes) OP_PUSHDATA1 PKHash(16 bytes) OP_EQUALVERIFY OP_CHECKSIG
+    assert(lockScript[0] == 118) // OP_DUP will be converted to noop in our vm as OP_SHA256 won't pop the stack
+    assert(lockScript[1] == 170)
+    assert(lockScript[2] == 76)
+    assert(lockScript[19] == 76)
+    assert(lockScript[36] == 136)
+    assert(lockScript[37] == 172)
+    field[2] pkHash = [
+        u8_to_field([...[0; 16], ...lockScript[3..19]]),
+        u8_to_field([...[0; 16], ...lockScript[20..36]])
+    ]
+
+    // The typical Bitcoin P2PKH unlock script is
+    // OP_PUSHDATA47 signature(71 bytes) OP_PUSHDATA21 PubKey(33 bytes)
+    // However, both signature and PubKey are in compressed form.
+    // In this example, we simplified them by using the uncompress form and separate signature
+    // into its original parameter of Rx, Ry and S
+    // * The "field" data types can only holds 254 bits(or 31 bytes) of data but the uncompressed pubkey
+    // has 65 bytes, so we separate it into 24, 24 and 17 bytes segment
+
+    // Modified unlock script is
+    // OP_PUSHDATA1 Rx(32bytes) OP_PUSHDATA1 Ry(32bytes) OP_PUSHDATA1 S(32bytes)
+    // OP_PUSHDATA1 PubKey(24 bytes) OP_PUSHDATA1 PubKey(24 bytes) OP_PUSHDATA1 PubKey(17 bytes) *
+    assert(unlockScript[0] == 76)
+    assert(unlockScript[33] == 76)
+    assert(unlockScript[66] == 76)
+    assert(unlockScript[99] == 76)
+    assert(unlockScript[124] == 76)
+    assert(unlockScript[149] == 76)
+
+    field[2] R = [u8_to_field(unlockScript[1..33]), u8_to_field(unlockScript[34..66])]
+    field S = u8_to_field(unlockScript[67..99])
+    field[3] rawPK = [
+        u8_to_field([...[0; 8], ...unlockScript[100..124]]),
+        u8_to_field([...[0; 8], ...unlockScript[125..149]]),
+        u8_to_field([...[0; 15], ...unlockScript[150..167]])
+    ]
+
+    field[MAX_OPS] ops = [
+        // unlockScript
+        76, R[0],           // OP_PUSHDATA1 Rx
+        76, R[1],           // OP_PUSHDATA1 Ry
+        76, S,              // OP_PUSHDATA1 S
+        76, rawPK[0],       // OP_PUSHDATA1 pk seg1
+        76, rawPK[1],       // OP_PUSHDATA1 pk seg2
+        76, rawPK[2],       // OP_PUSHDATA1 pk seg3
+        // lockscript
+        118,                // OP_DUP
+        170,                // OP_SHA256
+        76, pkHash[0],      // OP_PUSHDATA1 pkHash seg1
+        76, pkHash[1],      // OP_PUSHDATA1 pkHash seg2
+        136,                // OP_EUQLVERIFY
+        172                 // OP_CHECKSIG
+    ]
+    Context ctx = Context {
+        M0: M0,
+        M1: M1,
+    }
+    field[MAX_STACK] stack, u32 stackIdx, bool reverted = vm(emptyInitialStack(), 0, ops, ctx)
+    assert(!reverted)
+    assert(stack[stackIdx-1] == 1)
+
+    return stack[stackIdx-1] == 1
+

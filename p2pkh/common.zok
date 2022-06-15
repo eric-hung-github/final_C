@@ -1,0 +1,83 @@
+import "utils/casts/u8_to_bits" as u8_to_bits
+import "utils/casts/u8_from_bits" as u8_from_bits
+import "utils/pack/bool/pack256" as pack256
+import "utils/pack/bool/unpack256" as unpack256
+
+def u8_to_bools(u8[32] input) -> bool[256]:
+	bool[256] bits = [
+	    ...u8_to_bits(input[0]),
+	    ...u8_to_bits(input[1]),
+	    ...u8_to_bits(input[2]),
+	    ...u8_to_bits(input[3]),
+	    ...u8_to_bits(input[4]),
+	    ...u8_to_bits(input[5]),
+	    ...u8_to_bits(input[6]),
+	    ...u8_to_bits(input[7]),
+	    ...u8_to_bits(input[8]),
+	    ...u8_to_bits(input[9]),
+	    ...u8_to_bits(input[10]),
+	    ...u8_to_bits(input[11]),
+	    ...u8_to_bits(input[12]),
+	    ...u8_to_bits(input[13]),
+	    ...u8_to_bits(input[14]),
+	    ...u8_to_bits(input[15]),
+	    ...u8_to_bits(input[16]),
+	    ...u8_to_bits(input[17]),
+	    ...u8_to_bits(input[18]),
+	    ...u8_to_bits(input[19]),
+	    ...u8_to_bits(input[20]),
+	    ...u8_to_bits(input[21]),
+	    ...u8_to_bits(input[22]),
+	    ...u8_to_bits(input[23]),
+	    ...u8_to_bits(input[24]),
+	    ...u8_to_bits(input[25]),
+	    ...u8_to_bits(input[26]),
+	    ...u8_to_bits(input[27]),
+	    ...u8_to_bits(input[28]),
+	    ...u8_to_bits(input[29]),
+	    ...u8_to_bits(input[30]),
+	    ...u8_to_bits(input[31])
+	]
+    return bits
+
+def u8_to_field(u8[32] input) -> field:
+    return pack256(u8_to_bools(input))
+
+def bools_to_u8(bool[256] input) -> u8[32]:
+    return [
+        u8_from_bits(input[0..8]),
+        u8_from_bits(input[8..16]),
+        u8_from_bits(input[16..24]),
+        u8_from_bits(input[24..32]),
+        u8_from_bits(input[32..40]),
+        u8_from_bits(input[40..48]),
+        u8_from_bits(input[48..56]),
+        u8_from_bits(input[56..64]),
+        u8_from_bits(input[64..72]),
+        u8_from_bits(input[72..80]),
+        u8_from_bits(input[80..88]),
+        u8_from_bits(input[88..96]),
+        u8_from_bits(input[96..104]),
+        u8_from_bits(input[104..112]),
+        u8_from_bits(input[112..120]),
+        u8_from_bits(input[120..128]),
+        u8_from_bits(input[128..136]),
+        u8_from_bits(input[136..144]),
+        u8_from_bits(input[144..152]),
+        u8_from_bits(input[152..160]),
+        u8_from_bits(input[160..168]),
+        u8_from_bits(input[168..176]),
+        u8_from_bits(input[176..184]),
+        u8_from_bits(input[184..192]),
+        u8_from_bits(input[192..200]),
+        u8_from_bits(input[200..208]),
+        u8_from_bits(input[208..216]),
+        u8_from_bits(input[216..224]),
+        u8_from_bits(input[224..232]),
+        u8_from_bits(input[232..240]),
+        u8_from_bits(input[240..248]),
+        u8_from_bits(input[248..256])
+    ]
+
+def field_to_u8(field input) -> u8[32]:
+    return bools_to_u8(unpack256(input))

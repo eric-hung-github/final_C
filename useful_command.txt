@@ -1,0 +1,4 @@
+
+
+docker run -it --name zok --mount src="$(pwd)",target=/home/zokrates/final,type=bind zokrates/zokrates:0.7.13
+

@@ -1,0 +1,12 @@
+from "./common" import u8_to_field
+
+def extractPublicKey(u8[65] rawA) -> field[2]:
+    // must be uncompressed form
+    // assert(rawA[0] == 4)
+    return [u8_to_field(rawA[1..33]), u8_to_field(rawA[33..65])]
+
+def main(private u8[65] rawPK, field[2] pk) -> field[2]:
+    field[2] A = extractPublicKey(rawPK)
+    assert(A[0] == pk[0])
+    assert(A[1] == pk[1])
+    return A
